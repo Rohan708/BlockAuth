@@ -40,15 +40,15 @@ contract AccessControlContract {
 
     /**
      * @notice Emitted when a new identity is successfully registered.
-     * @param indexed entityAddress The address of the newly registered entity.
+     * @param entityAddress The address of the newly registered entity.
      * @param role The role assigned to the new entity.
      */
     event IdentityRegistered(address indexed entityAddress, string role);
 
     /**
      * @notice Emitted for every access attempt to create an immutable audit trail.
-     * @param indexed requester The address that initiated the access request.
-     * @param indexed resource The address of the resource being accessed.
+     * @param requester The address that initiated the access request.
+     * @param resource The address of the resource being accessed.
      * @param isSuccess True if access was granted, false otherwise.
      * @param timestamp The time of the access attempt.
      */
