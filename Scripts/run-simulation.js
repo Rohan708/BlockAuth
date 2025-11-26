@@ -1,7 +1,11 @@
-require('dotenv').config(); // Load .env file from the root project folder
+const path = require('path');
+// Load .env relative to the project root so it works regardless of CWD
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 const { postRequest } = require('./utils');
-const devices = require('./device-config');
+const devices = require('../scripts/device-config');
 const hre = require("hardhat");
+
+const RPC_URL = process.env.ALCHEMY_API_URL || "http://127.0.0.1:8545";
 
 // A simple delay function
 const delay = (ms) => new Promise(res => setTimeout(res, ms));
@@ -13,8 +17,8 @@ const delay = (ms) => new Promise(res => setTimeout(res, ms));
 async function setupSimulation() {
   console.log("--- Starting Simulation Setup ---");
 
-  // Get the provider from Hardhat
-  const provider = hre.ethers.provider;
+  // Always talk to the same JSON-RPC node the backend is using
+  const provider = new hre.ethers.JsonRpcProvider(RPC_URL);
 
   // Create a wallet instance for the admin using the private key from the .env file
   const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
@@ -26,12 +30,14 @@ async function setupSimulation() {
 
   // 1. Fund all the device accounts so they can pay for gas fees.
   console.log("\n[SETUP] Funding device accounts...");
+  let nextNonce = await provider.getTransactionCount(adminWallet.address, "latest");
   for (const deviceKey in devices) {
     const device = devices[deviceKey];
     console.log(`> Sending 1.0 ETH to ${device.name} (${device.address})...`);
     const tx = await adminWallet.sendTransaction({
       to: device.address,
-      value: hre.ethers.parseEther("1.0") // Send 1.0 ETH to each device
+      value: hre.ethers.parseEther("1.0"), // Send 1.0 ETH to each device
+      nonce: nextNonce++
     });
     await tx.wait();
     console.log(`> Transaction successful.`);

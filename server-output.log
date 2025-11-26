@@ -1,0 +1,16 @@
+
+> backend@1.0.0 start
+> node server.js
+
+[dotenv@17.2.1] injecting env (14) from ..\.env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[SERVER] Successfully loaded devices config: [
+  'smartLock',
+  'securityCamera',
+  'dataServer',
+  'employeeFob',
+  'unauthorizedActor'
+]
+Successfully connected to blockchain and smart contract.
+Server wallet address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Smart contract address: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+Server is running on http://localhost:5000

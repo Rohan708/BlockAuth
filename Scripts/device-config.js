@@ -8,32 +8,32 @@ const devices = {
   smartLock: {
     name: "Main Entrance Smart Lock",
     role: "Device_Lock",
-    address: "0x6F93aa46273567EF188b76f50366f4E38598f88F",
-    privateKey: "0xbc853abd02fb8f531ec0bf3666894d325761630339759ad1c5375a58360d7582"
+    address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    privateKey: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
   },
   securityCamera: {
     name: "Lobby Security Camera",
     role: "Device_Camera",
-    address: "0x5Af7d060A864fdbeDe900A709a34f57eAE8FbAAE",
-    privateKey: "0x01c8e3f3464f5311749a90f73274d2b41d4dd729aff311f6982a38ea20b0531f"
+    address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+    privateKey: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
   },
   dataServer: {
     name: "Secure Data Server",
     role: "Device_Server",
-    address: "0x29FA168772FA6ED3b65Cd42CacFa00316297a949",
-    privateKey: "0x06fb17282a9732e1e71329ccdeb02cb3872e12cc323dfebe4d206dfb37e3d2f5"
+    address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+    privateKey: "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"
   },
   employeeFob: {
     name: "Employee Fob",
     role: "User_Employee",
-    address: "0x1C00B42fDeb1fe0F7b10c7c444645133423de484",
-    privateKey: "0xb4995abb252f116ae92c45e4da1dc73e40c49babc9f60389590dceb2a69aa60c"
+    address: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    privateKey: "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a"
   },
   unauthorizedActor: {
     name: "Unauthorized Actor",
     role: "Guest", // This role won't be given any permissions
-    address: "0x22Cd0A86960851ff5F150ad3D504ccCdcE6F4777",
-    privateKey: "0x2ea6252aed1137356bb31880402bd87b2b5665177238fbaa0052b5c8c40e0876"
+    address: "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+    privateKey: "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba"
   }
 };
 
