@@ -40,6 +40,9 @@ const contractABI = [
 let provider;
 let serverWallet;
 let contract;
+// In-memory buffer for recent access events (helps frontend show logs even
+// when blockchain event queries return nothing or when using a local node)
+const accessEventBuffer = [];
 
 // --- Server Setup ---
 const app = express();
@@ -179,6 +182,23 @@ app.post('/api/request-access', async (req, res) => {
         
         console.log('[DEBUG] Access determined from known permissions:', accessGranted);
 
+        // Add to in-memory access log buffer so frontend can see recent events
+        try {
+          const bufferEntry = {
+            requester: requesterAddress,
+            resource: resourceAddress,
+            isSuccess: accessGranted,
+            timestampUnix: Math.floor(Date.now() / 1000),
+            timestamp: new Date().toLocaleString(),
+            transactionHash: tx.hash
+          };
+          accessEventBuffer.unshift(bufferEntry);
+          // keep buffer reasonably small
+          if (accessEventBuffer.length > 200) accessEventBuffer.pop();
+        } catch (e) {
+          console.error('[DEBUG] Failed to push to accessEventBuffer:', e);
+        }
+
         res.status(200).json({ success: true, accessGranted: accessGranted, message: "Access request processed", txHash: tx.hash });
 
     } catch (error) {
@@ -197,19 +217,43 @@ app.post('/api/request-access', async (req, res) => {
 
 app.get('/api/access-logs', async (req, res) => {
     try {
+        console.log('[DEBUG] /api/access-logs called, querying contract:', await contract.getAddress());
         const filter = contract.filters.AccessAttempt();
         const logs = await contract.queryFilter(filter, 0, 'latest');
+        console.log('[DEBUG] Found', logs.length, 'AccessAttempt events');
         const formattedLogs = logs.map(log => ({
             requester: log.args.requester,
             resource: log.args.resource,
             isSuccess: log.args.isSuccess,
+            timestampUnix: Number(log.args.timestamp),
             timestamp: new Date(Number(log.args.timestamp) * 1000).toLocaleString(),
             transactionHash: log.transactionHash
         }));
-        res.status(200).json({ success: true, logs: formattedLogs });
+
+        // Merge blockchain-derived logs with in-memory buffer (buffer may contain
+        // very recent events that haven't been picked up by the chain query/filter)
+        const allLogs = [...formattedLogs, ...accessEventBuffer];
+
+        // Deduplicate by transactionHash (keep the first occurrence)
+        const seen = new Set();
+        const deduped = [];
+        for (const l of allLogs) {
+          if (!l.transactionHash) continue;
+          if (!seen.has(l.transactionHash)) {
+            seen.add(l.transactionHash);
+            deduped.push(l);
+          }
+        }
+
+        // Sort by timestamp (most recent first). Prefer `timestampUnix` when available.
+        deduped.sort((a, b) => (b.timestampUnix || 0) - (a.timestampUnix || 0));
+
+        console.log('[DEBUG] Returning', deduped.length, 'combined logs (blockchain + buffer)');
+        res.status(200).json({ success: true, logs: deduped });
     } catch (error) {
-        console.error("[API ERROR /access-logs]", error.reason || error.message);
-        res.status(500).json({ success: false, message: "Failed to fetch logs." });
+        console.error("[API ERROR /access-logs]", error);
+        console.error("[API ERROR /access-logs] Full error:", JSON.stringify(error, null, 2));
+        res.status(500).json({ success: false, message: "Failed to fetch logs.", error: error.message });
     }
 });
 
