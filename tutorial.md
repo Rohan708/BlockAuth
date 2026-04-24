@@ -35,21 +35,61 @@ touch .env
 
 ### 1.2 Add the following environment variables to `.env`:
 
+The backend reads **`ALCHEMY_API_URL`** as the JSON-RPC URL (you can point it at Ganache or any Ethereum node).
+
 ```env
-GANACHE_URL=http://127.0.0.1:7545
-ADMIN_PRIVATE_KEY=your_admin_private_key_here
-SERVER_PRIVATE_KEY=your_server_private_key_here
-CONTRACT_ADDRESS=your_deployed_contract_address_here
+# JSON-RPC endpoint (Ganache default is often 7545; match hardhat.config.js networks.ganache.url)
+ALCHEMY_API_URL=http://127.0.0.1:7545
+
+# Used by Hardhat to deploy (recommended). Same as SERVER_PRIVATE_KEY for local dev.
+DEPLOYER_PRIVATE_KEY=0x...
+
+# Must be the same wallet that deployed the contract — it is the on-chain "Admin"
+SERVER_PRIVATE_KEY=0x...
+
+# Output from deployment (see Step 1.3)
+CONTRACT_ADDRESS=0x...
+
+# Used by Scripts/run-simulation.js to fund device accounts (same as deployer/admin is simplest)
+ADMIN_PRIVATE_KEY=0x...
+
 PORT=5000
 ```
 
 **Important**: Replace the placeholder values with your actual:
-- Ganache URL (usually `http://127.0.0.1:7545`)
-- Admin private key (from Ganache)
-- Server private key (from Ganache)
-- Contract address (from your deployment)
+- RPC URL (must match the network where the contract is deployed, e.g. Ganache `http://127.0.0.1:7545`)
+- **`SERVER_PRIVATE_KEY`**: private key of the contract deployer (constructor registers this address as `"Admin"`; only admins can register identities and grant access via the API)
+- **`ADMIN_PRIVATE_KEY`**: for the simulation script; use the same key as the deployer unless you know you need a different funded account
+- **`CONTRACT_ADDRESS`**: printed after you deploy (Step 1.3)
 
-**💡 Pro Tip**: When your first account runs low on ETH, you can use any of the other 9 Ganache accounts. Simply copy a new private key from Ganache and update `SERVER_PRIVATE_KEY` in your `.env` file, then restart the backend.
+**Optional (frontend)**: create `Frontend/.env` if you want to override defaults:
+
+```env
+REACT_APP_API_BASE_URL=http://localhost:5000/api
+REACT_APP_ADMIN_ADDRESS=0xYourDeployerAddress
+```
+
+`REACT_APP_ADMIN_ADDRESS` should match the wallet that deployed the contract so the dashboard can treat that connected wallet as admin in the UI.
+
+**💡 Pro Tip**: When your admin account runs low on ETH, fund it from another Ganache account or switch to a fresh Ganache workspace, redeploy, and update `CONTRACT_ADDRESS` and keys in `.env`.
+
+### 1.3 Install root tooling and deploy the contract
+
+From the **repository root** (where `hardhat.config.js` lives):
+
+```bash
+npm install
+```
+
+Start **Ganache** (or your node) so it matches `hardhat.config.js` — the sample `ganache` network uses `http://127.0.0.1:7545`.
+
+Deploy:
+
+```bash
+npx hardhat run Scripts/deploy.js --network ganache
+```
+
+Copy the printed **contract address** into `CONTRACT_ADDRESS` in `.env`. Use the **same account’s private key** for `SERVER_PRIVATE_KEY` and `ADMIN_PRIVATE_KEY` if that account was the deployer.
 
 ## 🚀 Step 2: Start the Backend Server
 
@@ -67,14 +107,16 @@ npm install
 
 ### 2.3 Start the backend server:
 
+The backend does not define an `npm start` script; run Node directly:
+
 ```bash
-npm start
+node server.js
 ```
 
 **Expected Output:**
 ```
 [SERVER] Successfully loaded devices config: [ 'employeeFob', 'smartLock', 'securityCamera', 'dataServer', 'unauthorizedActor' ]
-Successfully connected to Ganache and smart contract.
+Successfully connected to blockchain and smart contract.
 Server wallet address: 0x...
 Smart contract address: 0x...
 Server is running on http://localhost:5000
@@ -148,16 +190,18 @@ To create a production build, use npm run build.
 
 ### 6.1 Open a third terminal window/tab
 
-### 6.2 Navigate to Scripts directory:
+### 6.2 From the repository root (so `hardhat` and paths resolve correctly):
 
 ```bash
-cd BlockAuth/Scripts
+cd BlockAuth
 ```
 
 ### 6.3 Run the simulation:
 
+Ensure the **backend is already running** on port 5000. Then:
+
 ```bash
-node run-simulation.js
+node Scripts/run-simulation.js
 ```
 
 **Expected Output:**
@@ -183,24 +227,23 @@ node run-simulation.js
 # Check if device-config.js exists
 ls BlockAuth/Scripts/device-config.js
 
-# Verify the import path in server.js
-# Should be: require('../Scripts/device-config.js');
+# Backend loads config via require('../scripts/device-config.js') from Backend/server.js
+# On case-sensitive filesystems the folder must be named consistently with that path
 ```
 
 **Error: "Missing critical environment variables"**
 ```bash
-# Check if .env file exists and has correct values
-cat BlockAuth/.env
+# Check if .env file exists in the repo root and has correct values
 
-# Verify all required variables are set:
-# GANACHE_URL, SERVER_PRIVATE_KEY, CONTRACT_ADDRESS
+# Required by Backend/server.js:
+# ALCHEMY_API_URL, SERVER_PRIVATE_KEY, CONTRACT_ADDRESS
 ```
 
 **Error: "Failed to initialize blockchain connection"**
 ```bash
-# Check if Ganache is running
-# Verify the GANACHE_URL in .env
-# Ensure the private keys are correct
+# Check if Ganache (or your RPC node) is running
+# Verify ALCHEMY_API_URL in .env matches the node's URL
+# Ensure SERVER_PRIVATE_KEY is valid and CONTRACT_ADDRESS is deployed on that network
 ```
 
 ### Frontend Issues:
@@ -247,7 +290,7 @@ ls package.json
 ### To restart everything:
 
 1. **Stop all terminals** (Ctrl+C)
-2. **Start Backend**: `cd Backend && npm start`
+2. **Start Backend**: `cd Backend && node server.js`
 3. **Start Frontend**: `cd Frontend && npm start` (in new terminal)
 4. **Refresh browser** at `http://localhost:3000`
 
