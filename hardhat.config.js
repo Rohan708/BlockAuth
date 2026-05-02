@@ -30,6 +30,11 @@ module.exports = {
       url: "http://127.0.0.1:8545",
       // Hardhat node uses public test keys; override with DEPLOYER_PRIVATE_KEY if you want.
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : []
+    },
+    // Public testnet (recommended for a shareable demo)
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL || "",
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : []
     }
   }
 };
