@@ -6,7 +6,7 @@ const { ethers } = require('ethers');
 let devices;
 try {
   // Assuming device-config.js is in the 'scripts' folder, one level up
-  devices = require('../scripts/device-config.js'); 
+  devices = require('../Scripts/device-config.js'); 
   console.log('[SERVER] Successfully loaded devices config:', Object.keys(devices));
 } catch (error) {
   console.error('[SERVER] Failed to load devices config:', error.message);
@@ -43,6 +43,10 @@ let contract;
 // In-memory buffer for recent access events (helps frontend show logs even
 // when blockchain event queries return nothing or when using a local node)
 const accessEventBuffer = [];
+
+let simulationStartPromise = null;
+const ENABLE_SIMULATION_START = process.env.ENABLE_SIMULATION_START === "true";
+const SIMULATION_START_TOKEN = process.env.SIMULATION_START_TOKEN || "";
 
 // --- Server Setup ---
 const app = express();
@@ -86,6 +90,52 @@ async function init() {
 
 app.get('/', (req, res) => {
     res.status(200).json({ status: "ok", message: "API server is running." });
+});
+
+// Starts funding + registration + continuous traffic (intended for demos only).
+app.post("/api/start-simulation", async (req, res) => {
+  if (!ENABLE_SIMULATION_START) {
+    return res.status(404).json({ success: false, message: "Not found." });
+  }
+  if (!SIMULATION_START_TOKEN) {
+    return res.status(500).json({
+      success: false,
+      message: "Server misconfigured: SIMULATION_START_TOKEN is not set.",
+    });
+  }
+  const token = req.body?.token;
+  if (token !== SIMULATION_START_TOKEN) {
+    return res.status(403).json({ success: false, message: "Forbidden." });
+  }
+  if (!contract) {
+    return res
+      .status(503)
+      .json({ success: false, message: "Server not ready yet. Try again." });
+  }
+
+  try {
+    if (!simulationStartPromise) {
+      process.env.SIMULATION_API_BASE_URL = `http://127.0.0.1:${PORT}/api`;
+      const { startHostedSimulation } = require("../Scripts/run-simulation.js");
+      simulationStartPromise = startHostedSimulation().catch((err) => {
+        simulationStartPromise = null;
+        throw err;
+      });
+    }
+
+    await simulationStartPromise;
+    return res.status(200).json({
+      success: true,
+      message: "Simulation setup complete; continuous traffic is running.",
+    });
+  } catch (error) {
+    console.error("[API ERROR /start-simulation]", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to start simulation.",
+      error: error.reason || error.message,
+    });
+  }
 });
 
 // Admin-only endpoints (use the server's wallet)

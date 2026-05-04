@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
 const ADMIN_ADDRESS = (process.env.REACT_APP_ADMIN_ADDRESS || '').toLowerCase();
+const SIMULATION_START_TOKEN = process.env.REACT_APP_SIMULATION_START_TOKEN || '';
 
 function App() {
   const [walletAddress, setWalletAddress] = useState('');
@@ -24,6 +25,8 @@ function App() {
   });
   const [isGranting, setIsGranting] = useState(false);
   const [grantMessage, setGrantMessage] = useState('');
+  const [isStartingSimulation, setIsStartingSimulation] = useState(false);
+  const [simulationMessage, setSimulationMessage] = useState('');
 
   // Connect to MetaMask wallet
   const connectWallet = async () => {
@@ -154,6 +157,36 @@ function App() {
       if (manual) {
         setIsRefreshingLogs(false);
       }
+    }
+  };
+
+  const startSimulation = async () => {
+    if (!SIMULATION_START_TOKEN) {
+      setSimulationMessage(
+        'Missing REACT_APP_SIMULATION_START_TOKEN. Add it in Vercel env vars (must match backend SIMULATION_START_TOKEN).'
+      );
+      return;
+    }
+    setIsStartingSimulation(true);
+    setSimulationMessage('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/start-simulation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: SIMULATION_START_TOKEN }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSimulationMessage(data.message || 'Simulation started.');
+        fetchAccessLogs({ manual: true });
+      } else {
+        setSimulationMessage(data.message || 'Could not start simulation.');
+      }
+    } catch (err) {
+      console.error(err);
+      setSimulationMessage('Failed to reach the backend. Is it running and CORS OK?');
+    } finally {
+      setIsStartingSimulation(false);
     }
   };
 
@@ -376,14 +409,40 @@ function App() {
                 Monitor every access attempt between registered devices in real time.
               </p>
             </div>
-            <button
-              onClick={() => fetchAccessLogs({ manual: true })}
-              disabled={isRefreshingLogs}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              {isRefreshingLogs ? 'Refreshing...' : 'Refresh Now'}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={startSimulation}
+                disabled={isStartingSimulation}
+                className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                {isStartingSimulation ? 'Starting...' : 'Start simulation'}
+              </button>
+              <button
+                onClick={() => fetchAccessLogs({ manual: true })}
+                disabled={isRefreshingLogs}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                {isRefreshingLogs ? 'Refreshing...' : 'Refresh Now'}
+              </button>
+            </div>
           </div>
+
+          {simulationMessage && (
+            <div
+              className={`mt-4 text-sm px-4 py-2 rounded border ${
+                simulationMessage.toLowerCase().includes('missing')
+                  ? 'bg-yellow-700/20 border-yellow-500 text-yellow-100'
+                  : simulationMessage.toLowerCase().includes('started') ||
+                      simulationMessage.toLowerCase().includes('complete') ||
+                      simulationMessage.toLowerCase().includes('running')
+                    ? 'bg-green-700/30 border-green-600 text-green-100'
+                    : 'bg-red-700/30 border-red-600 text-red-100'
+              }`}
+            >
+              {simulationMessage}
+            </div>
+          )}
 
           <div className="flex items-center justify-between flex-wrap gap-4 mt-6">
             <div>
@@ -426,9 +485,10 @@ function App() {
                 Start the IoT simulation to generate traffic:
               </p>
               <ol className="list-decimal list-inside text-gray-300 text-sm mt-3 space-y-1">
-                <li>Run <code className="bg-gray-700 px-2 py-1 rounded text-xs">npx hardhat node</code></li>
-                <li>Start the backend at <code className="bg-gray-700 px-2 py-1 rounded text-xs">localhost:5000</code></li>
-                <li>Execute <code className="bg-gray-700 px-2 py-1 rounded text-xs">node scripts/run-simulation.js</code></li>
+                <li>
+                  Click <span className="font-semibold text-purple-200">Start simulation</span> above (hosted demo), or run{' '}
+                  <code className="bg-gray-700 px-2 py-1 rounded text-xs">node Scripts/run-simulation.js</code> locally.
+                </li>
               </ol>
               <p className="text-gray-400 text-sm mt-3">
                 Access attempts will appear here automatically once devices start interacting.

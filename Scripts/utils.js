@@ -1,7 +1,10 @@
 // This file contains helper functions for our simulation scripts.
 const fetch = require('node-fetch');
 
-const API_BASE_URL = 'http://localhost:5000/api';
+// When the simulation runs inside the backend process, call the local API (not a public URL).
+const API_BASE_URL =
+  process.env.SIMULATION_API_BASE_URL ||
+  `http://127.0.0.1:${process.env.PORT || 5000}/api`;
 
 /**
  * A helper function to make a POST request to our backend API.

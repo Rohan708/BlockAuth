@@ -73,6 +73,12 @@ Frontend should come up on `http://localhost:3000`.
 node Scripts/run-simulation.js
 ```
 
+- **8) Enable the hosted “Start simulation” button (Vercel + Render)**
+  - Pick a long random string and set it in **both** places:
+    - Render (backend): `ENABLE_SIMULATION_START=true` and `SIMULATION_START_TOKEN=<same secret>`
+    - Vercel (frontend): `REACT_APP_SIMULATION_START_TOKEN=<same secret>`
+  - Redeploy both services after changing env vars.
+
 ### Environment variables
 
 - **Backend / scripts (`.env`)**
@@ -86,6 +92,11 @@ node Scripts/run-simulation.js
 - **Frontend (`Frontend/.env`, optional)**
   - `REACT_APP_API_BASE_URL`: defaults to `http://localhost:5000/api`
   - `REACT_APP_ADMIN_ADDRESS`: the admin/deployer address (used for UI admin detection)
+  - `REACT_APP_SIMULATION_START_TOKEN`: must match backend `SIMULATION_START_TOKEN` if you use **Start simulation** in the UI
+
+- **Hosted demo safety switches (backend `.env` / hosting provider env vars)**
+  - `ENABLE_SIMULATION_START`: set to `true` only if you want the UI button to work
+  - `SIMULATION_START_TOKEN`: shared secret used by `POST /api/start-simulation`
 
 ### Full walkthrough
 

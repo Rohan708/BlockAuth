@@ -2,10 +2,12 @@ const path = require('path');
 // Load .env relative to the project root so it works regardless of CWD
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 const { postRequest } = require('./utils');
-const devices = require('../scripts/device-config');
-const hre = require("hardhat");
+const devices = require('../Scripts/device-config');
+const { ethers } = require("ethers");
 
 const RPC_URL = process.env.ALCHEMY_API_URL || "http://127.0.0.1:8545";
+
+let continuousSimulationStarted = false;
 
 // A simple delay function
 const delay = (ms) => new Promise(res => setTimeout(res, ms));
@@ -18,14 +20,14 @@ async function setupSimulation() {
   console.log("--- Starting Simulation Setup ---");
 
   // Always talk to the same JSON-RPC node the backend is using
-  const provider = new hre.ethers.JsonRpcProvider(RPC_URL);
+  const provider = new ethers.JsonRpcProvider(RPC_URL);
 
   // Create a wallet instance for the admin using the private key from the .env file
   const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
   if (!adminPrivateKey || !adminPrivateKey.startsWith('0x')) {
       throw new Error("The ADMIN_PRIVATE_KEY in your .env file is invalid or missing.");
   }
-  const adminWallet = new hre.ethers.Wallet(adminPrivateKey, provider);
+  const adminWallet = new ethers.Wallet(adminPrivateKey, provider);
   console.log(`\n[SETUP] Using admin account: ${adminWallet.address}`);
 
   // 1. Fund all the device accounts so they can pay for gas fees.
@@ -36,7 +38,7 @@ async function setupSimulation() {
     console.log(`> Sending 1.0 ETH to ${device.name} (${device.address})...`);
     const tx = await adminWallet.sendTransaction({
       to: device.address,
-      value: hre.ethers.parseEther("1.0"), // Send 1.0 ETH to each device
+      value: ethers.parseEther("1.0"), // Send 1.0 ETH to each device
       nonce: nextNonce++
     });
     await tx.wait();
@@ -84,6 +86,12 @@ async function setupSimulation() {
  * This function runs the continuous simulation of device interactions.
  */
 function runContinuousSimulation() {
+    if (continuousSimulationStarted) {
+      console.log("[SIM] Continuous simulation already running; skipping duplicate start.");
+      return;
+    }
+    continuousSimulationStarted = true;
+
     console.log("\n--- Starting Continuous Device Simulation ---");
     console.log("(Press CTRL+C to stop the simulation)\n");
 
@@ -118,13 +126,28 @@ function runContinuousSimulation() {
     }, 20000); // 20 seconds
 }
 
+/**
+ * Used by Backend/server.js: run setup once, then start intervals (idempotent for intervals).
+ */
+async function startHostedSimulation() {
+  await setupSimulation();
+  runContinuousSimulation();
+}
 
 async function main() {
   await setupSimulation();
   runContinuousSimulation();
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+module.exports = {
+  setupSimulation,
+  runContinuousSimulation,
+  startHostedSimulation,
+};
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
